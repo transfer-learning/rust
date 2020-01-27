@@ -3,14 +3,29 @@
 // compile-flags: -C debug_assertions=yes
 // revisions: std core
 
-#![feature(lang_items)]
+#![feature(lang_items, core_intrinsics)]
 #![cfg_attr(core, no_std)]
 
-#[cfg(std)] use std::fmt;
-#[cfg(core)] use core::fmt;
-#[cfg(core)] #[lang = "eh_personality"] fn eh_personality() {}
-#[cfg(core)] #[lang = "eh_unwind_resume"] fn eh_unwind_resume() {}
-#[cfg(core)] #[lang = "panic_impl"] fn panic_impl(panic: &core::panic::PanicInfo) -> ! { loop {} }
+#[cfg(core)]
+use core::fmt;
+#[cfg(std)]
+use std::fmt;
+#[cfg(core)]
+#[lang = "eh_personality"]
+fn eh_personality() {}
+#[cfg(core)]
+#[lang = "panic_impl"]
+fn panic_impl(panic: &core::panic::PanicInfo) -> ! {
+    loop {}
+}
+
+#[cfg(core)]
+unsafe extern "C" fn eh_unwind_resume(_: *mut u8) -> ! {
+    core::intrinsics::abort();
+}
+#[cfg(core)]
+#[lang = "eh_unwind_resume"]
+static _RESUME: unsafe extern "C" fn(*mut u8) -> ! = eh_unwind_resume;
 
 // (see documentation of the similarly-named test in run-pass)
 fn to_format_or_not_to_format() {
@@ -34,19 +49,22 @@ fn to_format_or_not_to_format() {
     //[core]~^ ERROR no arguments
     //[std]~^^ ERROR no arguments
 
-    #[cfg(std)] {
+    #[cfg(std)]
+    {
         eprint!("{}",);
         //[std]~^ ERROR no arguments
     }
 
-    #[cfg(std)] {
+    #[cfg(std)]
+    {
         // FIXME: compile-fail says "expected error not found" even though
         //        rustc does emit an error
         // eprintln!("{}",);
         // <DISABLED> [std]~^ ERROR no arguments
     }
 
-    #[cfg(std)] {
+    #[cfg(std)]
+    {
         format!("{}",);
         //[std]~^ ERROR no arguments
     }
@@ -57,12 +75,14 @@ fn to_format_or_not_to_format() {
 
     // if falsum() { panic!("{}",); } // see run-pass
 
-    #[cfg(std)] {
+    #[cfg(std)]
+    {
         print!("{}",);
         //[std]~^ ERROR no arguments
     }
 
-    #[cfg(std)] {
+    #[cfg(std)]
+    {
         // FIXME: compile-fail says "expected error not found" even though
         //        rustc does emit an error
         // println!("{}",);

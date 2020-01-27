@@ -407,17 +407,9 @@ impl MiscMethods<'tcx> for CodegenCx<'ll, 'tcx> {
         let tcx = self.tcx;
         assert!(self.sess().target.target.options.custom_unwind_resume);
         if let Some(def_id) = tcx.lang_items().eh_unwind_resume() {
-            let llfn = self.get_fn_addr(
-                ty::Instance::resolve(
-                    tcx,
-                    ty::ParamEnv::reveal_all(),
-                    def_id,
-                    tcx.intern_substs(&[]),
-                )
-                .unwrap(),
-            );
-            unwresume.set(Some(llfn));
-            return llfn;
+            let static_ptr = self.get_static(def_id);
+            unwresume.set(Some(static_ptr));
+            return static_ptr;
         }
 
         let sig = ty::Binder::bind(tcx.mk_fn_sig(
@@ -431,8 +423,9 @@ impl MiscMethods<'tcx> for CodegenCx<'ll, 'tcx> {
         let fn_abi = FnAbi::of_fn_ptr(self, sig, &[]);
         let llfn = self.declare_fn("rust_eh_unwind_resume", &fn_abi);
         attributes::apply_target_cpu_attr(self, llfn);
-        unwresume.set(Some(llfn));
-        llfn
+        let static_ptr = self.static_addr_of(llfn, tcx.data_layout.pointer_align.abi, None);
+        unwresume.set(Some(static_ptr));
+        static_ptr
     }
 
     fn sess(&self) -> &Session {

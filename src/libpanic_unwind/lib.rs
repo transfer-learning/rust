@@ -30,6 +30,7 @@
 #![feature(raw)]
 #![panic_runtime]
 #![feature(panic_runtime)]
+#![allow(dead_code)]
 
 use alloc::boxed::Box;
 use core::any::Any;

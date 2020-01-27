@@ -324,16 +324,25 @@ unsafe fn find_eh_action(
     eh::find_eh_action(lsda, &eh_context, foreign_exception)
 }
 
-// See docs in the `unwind` module.
+#[cfg(all(
+    target_os = "windows",
+    any(target_arch = "x86", target_arch = "x86_64"),
+    target_env = "gnu"
+))]
+#[cfg_attr(not(bootstrap), lang = "eh_unwind_resume")]
+#[used]
+pub static RESUME: unsafe extern "C" fn(*mut uw::_Unwind_Exception) -> ! =
+    uw::_Unwind_Resume as unsafe extern "C" fn(_) -> !;
+
 #[cfg(all(
     target_os = "windows",
     any(target_arch = "x86", target_arch = "x86_64"),
     target_env = "gnu"
 ))]
 #[lang = "eh_unwind_resume"]
-#[unwind(allowed)]
-unsafe extern "C" fn rust_eh_unwind_resume(panic_ctx: *mut u8) -> ! {
-    uw::_Unwind_Resume(panic_ctx as *mut uw::_Unwind_Exception);
+#[cfg(bootstrap)]
+pub unsafe extern "C" fn rust_eh_unwind_resume(p: *mut u8) -> ! {
+    uw::_Unwind_Resume(p as *mut uw::_Unwind_Exception)
 }
 
 // Frame unwind info registration
