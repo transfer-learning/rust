@@ -184,7 +184,8 @@ impl<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>> FunctionCx<'a, 'tcx, Bx> {
                 lp = bx.insert_value(lp, lp1, 1);
                 bx.resume(lp);
             } else {
-                bx.call(bx.eh_unwind_resume(), &[lp0], helper.funclet(self));
+                let llfn = bx.load(bx.eh_unwind_resume(), bx.tcx().data_layout.pointer_align.abi);
+                bx.call(llfn, &[lp0], helper.funclet(self));
                 bx.unreachable();
             }
         }

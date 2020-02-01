@@ -858,8 +858,10 @@ fn try_intrinsic(
 ) {
     if bx.sess().no_landing_pads() {
         bx.call(func, &[data], None);
-        let ptr_align = bx.tcx().data_layout.pointer_align.abi;
-        bx.store(bx.const_null(bx.type_i8p()), dest, ptr_align);
+        // Return 0 unconditionally from the intrinsic call;
+        // we can never unwind.
+        let ret_align = bx.tcx().data_layout.i32_align.abi;
+        bx.store(bx.const_i32(0), dest, ret_align);
     } else if wants_msvc_seh(bx.sess()) {
         codegen_msvc_try(bx, func, data, local_ptr, dest);
     } else {
@@ -952,6 +954,31 @@ fn codegen_msvc_try(
         let cs = catchswitch.catch_switch(None, None, 1);
         catchswitch.add_handler(cs, catchpad.llbb());
 
+        // We can't use the TypeDescriptor defined in libpanic_unwind because it
+        // might be in another DLL and the SEH encoding only supports specifying
+        // a TypeDescriptor from the current module.
+        //
+        // However this isn't an issue since the MSVC runtime uses string
+        // comparison on the type name to match TypeDescriptors rather than
+        // pointer equality.
+        //
+        // So instead we generate a new TypeDescriptor in each module that uses
+        // `try` and let the linker merge duplicate definitions in the same
+        // module.
+        //
+        // When modifying, make sure that the type_name string exactly matches
+        // the one used in src/libpanic_unwind/seh.rs.
+        let type_info_vtable = bx.declare_global("??_7type_info@@6B@", bx.type_i8p());
+        let type_name = bx.const_bytes(b"rust_panic\0");
+        let type_info =
+            bx.const_struct(&[type_info_vtable, bx.const_null(bx.type_i8p()), type_name], false);
+        let tydesc = bx.declare_global("__rust_panic_type_info", bx.val_ty(type_info));
+        unsafe {
+            llvm::LLVMRustSetLinkage(tydesc, llvm::Linkage::LinkOnceODRLinkage);
+            llvm::SetUniqueComdat(bx.llmod, tydesc);
+            llvm::LLVMSetInitializer(tydesc, type_info);
+        }
+
         // The flag value of 8 indicates that we are catching the exception by
         // reference instead of by value. We can't use catch by value because
         // that requires copying the exception object, which we don't support
@@ -959,12 +986,7 @@ fn codegen_msvc_try(
         //
         // Source: MicrosoftCXXABI::getAddrOfCXXCatchHandlerType in clang
         let flags = bx.const_i32(8);
-        let tydesc = match bx.tcx().lang_items().eh_catch_typeinfo() {
-            Some(did) => bx.get_static(did),
-            None => bug!("eh_catch_typeinfo not defined, but needed for SEH unwinding"),
-        };
         let funclet = catchpad.catch_pad(cs, &[tydesc, flags, slot]);
-
         let i64_align = bx.tcx().data_layout.i64_align.abi;
         let payload_ptr = catchpad.load(slot, ptr_align);
         let payload = catchpad.load(payload_ptr, i64_align);
@@ -1084,6 +1106,8 @@ fn gen_fn<'ll, 'tcx>(
     ));
     let fn_abi = FnAbi::of_fn_ptr(cx, rust_fn_sig, &[]);
     let llfn = cx.declare_fn(name, &fn_abi);
+    cx.set_frame_pointer_elimination(llfn);
+    cx.apply_target_cpu_attr(llfn);
     // FIXME(eddyb) find a nicer way to do this.
     unsafe { llvm::LLVMRustSetLinkage(llfn, llvm::Linkage::InternalLinkage) };
     let bx = Builder::new_block(cx, llfn, "entry-block");

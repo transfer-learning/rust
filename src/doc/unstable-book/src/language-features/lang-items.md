@@ -52,7 +52,11 @@ fn main(_argc: isize, _argv: *const *const u8) -> isize {
 
 #[lang = "eh_personality"] extern fn rust_eh_personality() {}
 #[lang = "panic_impl"] extern fn rust_begin_panic(info: &PanicInfo) -> ! { unsafe { intrinsics::abort() } }
-#[lang = "eh_unwind_resume"] extern fn rust_eh_unwind_resume() {}
+extern "C" fn eh_unwind_resume(_: *mut u8) -> ! {
+    loop {}
+}
+#[lang = "eh_unwind_resume"]
+static _RESUME: fn(*mut u8) -> ! = eh_unwind_resume;
 #[no_mangle] pub extern fn rust_eh_register_frames () {}
 #[no_mangle] pub extern fn rust_eh_unregister_frames () {}
 ```
@@ -131,10 +135,12 @@ pub extern fn rust_eh_personality() {
 }
 
 // This function may be needed based on the compilation target.
-#[lang = "eh_unwind_resume"]
-#[no_mangle]
-pub extern fn rust_eh_unwind_resume() {
+extern "C" fn eh_unwind_resume(_: *mut u8) -> ! {
+    loop {}
 }
+#[lang = "eh_unwind_resume"]
+static _RESUME: fn(*mut u8) -> ! = eh_unwind_resume;
+
 
 #[lang = "panic_impl"]
 #[no_mangle]
@@ -248,7 +254,6 @@ the source code.
   - `eh_personality`: `libpanic_unwind/gcc.rs` (GNU)
   - `eh_personality`: `libpanic_unwind/seh.rs` (SEH)
   - `eh_unwind_resume`: `libpanic_unwind/gcc.rs` (GCC)
-  - `eh_catch_typeinfo`: `libpanic_unwind/seh.rs` (SEH)
   - `eh_catch_typeinfo`: `libpanic_unwind/emcc.rs` (EMCC)
   - `panic`: `libcore/panicking.rs`
   - `panic_bounds_check`: `libcore/panicking.rs`

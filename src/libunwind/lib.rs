@@ -4,6 +4,7 @@
 #![feature(nll)]
 #![feature(staged_api)]
 #![feature(unwind_attributes)]
+#![feature(lang_items)]
 #![feature(static_nobundle)]
 #![cfg_attr(not(target_env = "msvc"), feature(libc))]
 
