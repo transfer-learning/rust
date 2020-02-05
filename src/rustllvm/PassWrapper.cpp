@@ -209,6 +209,12 @@ void LLVMRustAddLastExtensionPasses(
 #define SUBTARGET_RISCV
 #endif
 
+#ifdef LLVM_COMPONENT_TL45
+#define SUBTARGET_TL45 SUBTARGET(TL45)
+#else
+#define SUBTARGET_TL45
+#endif
+
 #ifdef LLVM_COMPONENT_SPARC
 #define SUBTARGET_SPARC SUBTARGET(Sparc)
 #else
@@ -232,6 +238,7 @@ void LLVMRustAddLastExtensionPasses(
   SUBTARGET_SPARC                                                              \
   SUBTARGET_HEXAGON                                                            \
   SUBTARGET_RISCV                                                              \
+  SUBTARGET_TL45
 
 #define SUBTARGET(x)                                                           \
   namespace llvm {                                                             \

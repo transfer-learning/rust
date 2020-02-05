@@ -143,6 +143,7 @@ static TARGETS: &[&str] = &[
     "x86_64-unknown-netbsd",
     "x86_64-unknown-redox",
     "x86_64-unknown-hermit",
+    "tl45-unknown-unknown",
 ];
 
 static DOCS_TARGETS: &[&str] = &[

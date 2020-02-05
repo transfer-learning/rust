@@ -126,6 +126,14 @@ pub fn initialize_available_targets() {
         LLVMInitializeRISCVAsmParser
     );
     init_target!(
+        llvm_component = "tl45",
+        LLVMInitializeTL45TargetInfo,
+        LLVMInitializeTL45Target,
+        LLVMInitializeTL45TargetMC,
+        LLVMInitializeTL45AsmPrinter,
+        LLVMInitializeTL45AsmParser
+    );
+    init_target!(
         llvm_component = "sparc",
         LLVMInitializeSparcTargetInfo,
         LLVMInitializeSparcTarget,

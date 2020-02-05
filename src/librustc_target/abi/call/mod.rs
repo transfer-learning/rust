@@ -22,6 +22,7 @@ mod wasm32_bindgen_compat;
 mod x86;
 mod x86_64;
 mod x86_win64;
+mod tl45;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum PassMode {
@@ -536,6 +537,7 @@ impl<'a, Ty> FnAbi<'a, Ty> {
             "hexagon" => hexagon::compute_abi_info(self),
             "riscv32" => riscv::compute_abi_info(self, 32),
             "riscv64" => riscv::compute_abi_info(self, 64),
+            "tl45" => tl45::compute_abi_info(self, 32),
             "wasm32" if cx.target_spec().target_os != "emscripten" => {
                 wasm32_bindgen_compat::compute_abi_info(self)
             }
