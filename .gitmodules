@@ -42,4 +42,4 @@
 	url = https://github.com/rust-embedded/book.git
 [submodule "src/llvm-project"]
 	path = src/llvm-project
-	url = git@github.com:transfer-learning/llvm-tl45.git
+	url = https://github.com/transfer-learning/llvm-tl45.git
